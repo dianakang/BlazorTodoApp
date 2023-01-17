@@ -1,10 +1,18 @@
+using BlazorTodoApp.Server.Services;
 using Microsoft.AspNetCore.ResponseCompression;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
+// About CosmosDB
+builder.Services.Configure<CosmosDbServiceOptions>(builder.Configuration.GetSection("CosmosDb"));
+builder.Services.AddSingleton<CosmosDbService>();
 
-builder.Services.AddControllersWithViews();
+// Add services to the container.
+builder.Services.AddTransient<TodoService>();
+builder.Services.AddControllersWithViews().ConfigureApiBehaviorOptions(options =>
+{
+    options.SuppressModelStateInvalidFilter = true;
+});
 builder.Services.AddRazorPages();
 
 var app = builder.Build();

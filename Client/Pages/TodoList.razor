@@ -1,0 +1,91 @@
+﻿@using BlazorTodoApp.Shared
+
+<ul class="text-start mt-3">
+    @foreach (var todo in Todos)
+    {
+        <li class="d-flex justify-content-between align-items-center">
+
+            @if (todo.IsEdited == true)
+            {
+                <input type="text" @bind="currentTodo.Title" class="" />
+                <div class="ml-2">
+                    <img src="img/infrabasic/save.png" @onclick="e => Edit(todo)" width="25px" />
+                </div>
+            }
+            else
+            {
+                <input type="text" @bind="todo.Title" class="input-none" readonly />
+                <div class="ml-2">
+                    <img src="img/infrabasic/pencil.png" @onclick="e => ChangeEditMode(todo)" width="22px" />
+                </div>
+            }
+
+            @if(todo.IsDone)
+            {
+                
+            }
+            else
+            {
+                <div class="ml-2">
+                    <img src="img/infrabasic/ok.png" @onclick="e => Done(todo)" width="25px" />
+                </div>
+            }
+
+            <div class="ml-2">
+                <img src="img/infrabasic/close.png" @onclick="e => Delete(todo)" width="22px" />
+            </div>
+
+        </li>
+    }
+</ul>
+
+@code {
+    [Parameter]
+    public List<Todo> Todos { get; set; }
+
+    [Parameter]
+    public EventCallback<Todo> OnEditClicked { get; set; }
+
+    [Parameter]
+    public EventCallback<Todo> OnDoneClicked { get; set; }
+
+    [Parameter]
+    public EventCallback<Todo> OnDeleteClicked { get; set; }
+
+    private string? editTitle = "";
+
+    private Todo currentTodo = new();
+
+    private async Task Edit(Todo todo)
+    {
+        todo.IsEdited = false;
+
+        await OnEditClicked.InvokeAsync(todo);
+    }
+
+    private async Task ChangeEditMode(Todo todo)
+    {
+        if (!string.IsNullOrEmpty(currentTodo.Id))
+        {
+            currentTodo.IsEdited = false;
+        }
+
+        currentTodo = Todos.FirstOrDefault(x => x.Id.Contains(todo.Id));
+
+        if (!string.IsNullOrEmpty(currentTodo.Id))
+        {
+            currentTodo = todo;
+            currentTodo.IsEdited = true;
+        }
+    }
+
+    private async Task Done(Todo todo)
+    {
+        await OnDoneClicked.InvokeAsync(todo);
+    }
+
+    private async Task Delete(Todo todo)
+    {
+        await OnDeleteClicked.InvokeAsync(todo);
+    }
+}

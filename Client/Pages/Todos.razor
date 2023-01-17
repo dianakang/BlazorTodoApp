@@ -1,0 +1,148 @@
+@page "/todo"
+@using BlazorTodoApp.Shared
+@inject HttpClient Http
+
+<PageTitle>Todo</PageTitle>
+
+<section class="py-5">
+    <div class="d-flex flex-column py-5">
+        <h1 class="mx-auto mb-4 my-5">Todo-List</h1>
+        <div class="mx-auto text-center">
+            <EditForm Model="newTodo" OnValidSubmit="CreateTodo" class="border-1 border-bottom border-dark py-3">
+                <div class="d-flex ps-4">
+                    <InputText class="col-10 me-2" type="text" placeholder="Enter a Todo..." @bind-Value="newTodo.Title" />
+                    <button class="btn btn-primary btn-sm">Add</button>
+                </div>
+            </EditForm>
+
+            <h2>Not started</h2>
+            @* IsDone == false인 애들만 가져오기 *@
+            <TodoList Todos="notStartedTodos" OnEditClicked="UpdateTodo" OnDoneClicked="DoneTodo" OnDeleteClicked="DeleteTodo"></TodoList>
+            
+            <h2>Done</h2>
+            @* IsDone == true인 애들만 가져오기 *@
+            <TodoList Todos="doneTodos" OnEditClicked="UpdateTodo" OnDeleteClicked="DeleteTodo"></TodoList>
+        </div>
+    </div>
+</section>
+
+@code {
+    Todo newTodo = new();
+    List<Todo> todos = new();
+
+    List<Todo> notStartedTodos = new();
+    List<Todo> doneTodos = new();
+
+    private string? editTodoTitle = "";
+    private string currentEditTodoId = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        todos = await Http.GetFromJsonAsync<List<Todo>>($"api/Todo/GetTodos");
+        UpdateTodoGroups();
+    }
+
+    // Create
+    private async Task CreateTodo()
+    {
+        var httpResponse = await Http.PostAsJsonAsync<Todo>($"api/Todo/CreateTodo", newTodo);
+
+        if (httpResponse.IsSuccessStatusCode)
+        {
+            Console.WriteLine("Successful! New todo has been sent to CosmosDB");
+
+            await LoadTodos();
+        }
+        else
+        {
+            Console.WriteLine("Fail! There is an error");
+        }
+
+        newTodo.Title = "";
+    }
+
+    // Update
+    private async Task ChangeToEditMode(string id)
+    {
+        currentEditTodoId = id;
+        editTodoTitle = todos.FirstOrDefault(x => x.Id == id).Title;
+    }
+
+    private async Task ChangeTodoTitle(string id)
+    {
+        Todo tempTodo = new();
+        tempTodo = todos.FirstOrDefault(x => x.Id == id);
+        tempTodo.Title = editTodoTitle;
+        await UpdateTodo(tempTodo);
+        currentEditTodoId = "";
+    }
+
+    private async Task UpdateTodo(Todo todo)
+    {
+        var httpResponse = await Http.PostAsJsonAsync<Todo>($"api/ToDo/UpdateTodo", todo);
+
+        if (httpResponse.IsSuccessStatusCode)
+        {
+            Console.WriteLine("Edit Success");
+            await LoadTodos();
+        }
+        else
+        {
+            Console.WriteLine("Edit Fail");
+        }
+
+        newTodo.Title = "";
+    }
+
+    // Delete
+    private async Task DeleteTodo(Todo todo)
+    {
+        var httpResponse = await Http.PostAsJsonAsync<Todo>($"api/Todo/DeleteTodo", todo);
+
+        if (httpResponse.IsSuccessStatusCode)
+        {
+            Console.WriteLine("Successful! the todo has been removed from CosmosDB");
+
+            await LoadTodos();
+        }
+        else
+        {
+            Console.WriteLine("Fail! There is an error");
+        }
+
+        newTodo.Title = "";
+    }
+
+    private async Task DoneTodo(Todo todo)
+    {
+        todo.IsDone = true;
+        var httpResponse = await Http.PostAsJsonAsync<Todo>($"api/Todo/DoneTodo", todo);
+
+        if (httpResponse.IsSuccessStatusCode)
+        {
+            Console.WriteLine("You've just got a todo done!");
+
+            await LoadTodos();
+        }
+        else
+        {
+            Console.WriteLine("Fail to get something done!");
+        }
+
+        newTodo.Title = "";
+    }
+    
+    // Read
+    private async Task LoadTodos()
+    {
+        todos = await Http.GetFromJsonAsync<List<Todo>>($"api/Todo/GetTodos");
+
+        UpdateTodoGroups();
+    }
+
+    void UpdateTodoGroups()
+    {
+        notStartedTodos = todos.Where(x => x.IsDone == false).ToList();
+        doneTodos = todos.Where(x => x.IsDone == true).ToList();
+    }
+}
